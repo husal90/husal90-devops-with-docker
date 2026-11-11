@@ -1,0 +1,9 @@
+FROM golang:1.24
+WORKDIR /myproject
+COPY code/example-backend .
+RUN go build -o server && rm -rf cache && useradd -m app
+ENV REQUEST_ORIGIN=http://localhost:5000
+ENV PORT=8080
+EXPOSE 8080
+USER app
+CMD ["./server"]

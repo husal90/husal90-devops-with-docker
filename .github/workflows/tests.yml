@@ -1,0 +1,40 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      tests: ${{ steps.list.outputs.tests }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: list
+        run: |
+          # 1.15 and 1.16 are alternatives, so only the combined test is run
+          echo "tests=$(ls exercises-*/tests/test_*.sh | grep -v -e test_1_15_dockerhub -e test_1_16_ | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test_script: ${{ fromJson(needs.discover.outputs.tests) }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Use a reachable apt mirror
+        run: |
+          sudo sed -i -E 's#^URIs: .*#URIs: http://mirrors.edge.kernel.org/ubuntu/#' /etc/apt/sources.list.d/ubuntu.sources || true
+          sudo sed -i -E 's#//[a-z.]*ubuntu\.com#//mirrors.edge.kernel.org#g' /etc/apt/sources.list || true
+
+      - name: Run ${{ matrix.test_script }}
+        run: bash "${{ matrix.test_script }}"

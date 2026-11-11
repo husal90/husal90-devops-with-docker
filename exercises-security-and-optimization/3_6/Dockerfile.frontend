@@ -1,0 +1,15 @@
+FROM ubuntu:22.04
+WORKDIR /myapp
+COPY code/example-frontend .
+ENV REACT_APP_BACKEND_URL=http://localhost:8080
+RUN sed -i 's#//[a-z]*\.ubuntu\.com#//mirrors.edge.kernel.org#g' $(ls /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null) \
+    && apt-get update && apt-get install -y curl xz-utils ca-certificates \
+    && curl -fsSL https://nodejs.org/dist/v16.20.2/node-v16.20.2-linux-x64.tar.xz | tar -xJ -C /usr/local --strip-components=1 \
+    && npm install \
+    && npm run build \
+    && npm install -g serve \
+    && rm -rf src node_modules /var/lib/apt/lists/* \
+    && useradd -m app
+USER app
+EXPOSE 5000
+CMD ["serve", "-s", "-l", "5000", "build"]
